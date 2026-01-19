@@ -1,0 +1,384 @@
+openapi: 3.0.3
+info:
+  title: Hydrozen API
+  version: 1.0.0
+  description: >
+    The Hydrozen API allows developers to programmatically manage uptime, heartbeat, and domain monitors.
+    It supports full CRUD operations, authentication via API key, and event reporting via webhooks.
+servers:
+  - url: https://app.hydrozen.io/api
+    description: Production API server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Monitor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [http, tcp, udp, ping]
+        url:
+          type: string
+        frequency:
+          type: integer
+          description: Frequency of checks in seconds
+        last_status:
+          type: string
+          enum: [up, down, unknown]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    HeartbeatMonitor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        expected_interval:
+          type: integer
+        last_ping:
+          type: string
+          format: date-time
+    DomainMonitor:
+      type: object
+      properties:
+        id:
+          type: string
+        domain:
+          type: string
+        expires_on:
+          type: string
+          format: date
+        days_until_expiry:
+          type: integer
+        registrar:
+          type: string
+    NotificationHandler:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [email, slack, webhook, telegram]
+        destination:
+          type: string
+security:
+  - bearerAuth: []
+paths:
+
+  /monitors:
+    get:
+      summary: List all uptime monitors
+      tags: [Uptime Monitors]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of monitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Monitor'
+    post:
+      summary: Create a new uptime monitor
+      tags: [Uptime Monitors]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                url: { type: string }
+                type: { type: string }
+                frequency: { type: integer }
+      responses:
+        '201':
+          description: Monitor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monitor'
+
+  /monitors/{id}:
+    get:
+      summary: Retrieve an uptime monitor by ID
+      tags: [Uptime Monitors]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Monitor details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monitor'
+    put:
+      summary: Update an uptime monitor
+      tags: [Uptime Monitors]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Monitor'
+      responses:
+        '200':
+          description: Monitor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monitor'
+    delete:
+      summary: Delete an uptime monitor
+      tags: [Uptime Monitors]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Monitor deleted successfully
+
+  /heartbeats:
+    get:
+      summary: List all heartbeat monitors
+      tags: [Heartbeat Monitors]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of heartbeat monitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HeartbeatMonitor'
+    post:
+      summary: Create a new heartbeat monitor
+      tags: [Heartbeat Monitors]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                expected_interval: { type: integer }
+      responses:
+        '201':
+          description: Heartbeat monitor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatMonitor'
+
+  /heartbeats/{id}:
+    get:
+      summary: Retrieve a heartbeat monitor
+      tags: [Heartbeat Monitors]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Heartbeat details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatMonitor'
+    delete:
+      summary: Delete a heartbeat monitor
+      tags: [Heartbeat Monitors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted successfully
+
+  /domains:
+    get:
+      summary: List domain monitors
+      tags: [Domain Monitors]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of domain monitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DomainMonitor'
+    post:
+      summary: Add a domain monitor
+      tags: [Domain Monitors]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domain: { type: string }
+      responses:
+        '201':
+          description: Domain monitor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainMonitor'
+
+  /domains/{id}:
+    get:
+      summary: Retrieve domain monitor by ID
+      tags: [Domain Monitors]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Domain monitor details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainMonitor'
+    delete:
+      summary: Delete a domain monitor
+      tags: [Domain Monitors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Domain monitor deleted
+
+  /notifications:
+    get:
+      summary: List notification handlers
+      tags: [Notification Handlers]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of notification handlers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationHandler'
+    post:
+      summary: Create a new notification handler
+      tags: [Notification Handlers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                type: { type: string }
+                destination: { type: string }
+      responses:
+        '201':
+          description: Notification handler created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHandler'
+
+  /notifications/{id}:
+    get:
+      summary: Retrieve notification handler
+      tags: [Notification Handlers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Notification handler details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHandler'
+    delete:
+      summary: Delete notification handler
+      tags: [Notification Handlers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Notification handler deleted
